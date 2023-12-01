@@ -1,4 +1,4 @@
-use color_eyre::eyre::{bail, Result};
+use color_eyre::eyre::Result;
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install().unwrap();
