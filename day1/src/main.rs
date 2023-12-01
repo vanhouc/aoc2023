@@ -22,12 +22,11 @@ fn calculate_calibration(line: &str) -> color_eyre::Result<u32> {
     if digits.len() < 2 {
         digits.push(*digits.first().unwrap());
     }
+    // Drain inner elements of digits
+    digits.drain(1..digits.len() - 1);
     // Create a string out of the first and last digits and parse it into a u32
-    let combined_number: u32 = vec![digits.first().unwrap(), digits.last().unwrap()]
-        .into_iter()
-        .collect::<String>()
-        .parse()?;
-    Ok(combined_number)
+    let calibration: u32 = digits.into_iter().collect::<String>().parse()?;
+    Ok(calibration)
 }
 
 #[cfg(test)]
