@@ -1,4 +1,19 @@
 use color_eyre::eyre::Result;
+use once_cell::sync::Lazy;
+
+static ENGLISH_DIGITS: Lazy<Vec<(&str, char)>> = Lazy::new(|| {
+    vec![
+        ("one", '1'),
+        ("two", '2'),
+        ("three", '3'),
+        ("four", '4'),
+        ("five", '5'),
+        ("six", '6'),
+        ("seven", '7'),
+        ("eight", '8'),
+        ("nine", '9'),
+    ]
+});
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install().unwrap();
@@ -10,7 +25,10 @@ fn main() -> color_eyre::Result<()> {
         .map(calculate_calibration)
         .sum::<Result<u32>>()?;
 
-    println!("Total Calibration Value: {output}");
+    println!("Part 1 Answer: {output}");
+
+    let output: Option<u32> = input.lines().map(parse_calibration).sum();
+    println!("Part 2 Answer: {}", output.unwrap());
 
     Ok(())
 }
@@ -29,11 +47,53 @@ fn calculate_calibration(line: &str) -> color_eyre::Result<u32> {
     Ok(calibration)
 }
 
+fn parse_calibration(line: &str) -> Option<u32> {
+    let digits: String = [
+        find_first_digit(line.chars())?,
+        find_last_digit(line.chars().rev())?,
+    ]
+    .into_iter()
+    .collect();
+    digits.parse().ok()
+}
+
+fn find_first_digit(line: impl Iterator<Item = char>) -> Option<char> {
+    let mut acc = String::new();
+    for c in line {
+        if c.is_ascii_digit() {
+            return Some(c);
+        }
+        acc.push(c);
+        for (name, digit) in &*ENGLISH_DIGITS {
+            if acc.contains(name) {
+                return Some(*digit);
+            }
+        }
+    }
+    None
+}
+
+fn find_last_digit(line: impl Iterator<Item = char>) -> Option<char> {
+    let mut acc = String::new();
+    for c in line {
+        if c.is_ascii_digit() {
+            return Some(c);
+        }
+        acc.insert(0, c);
+        for (name, digit) in &*ENGLISH_DIGITS {
+            if acc.contains(name) {
+                return Some(*digit);
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use color_eyre::eyre::Result;
 
-    use crate::calculate_calibration;
+    use crate::{calculate_calibration, parse_calibration};
 
     #[test]
     fn get_digits_test() -> Result<()> {
@@ -41,6 +101,18 @@ mod tests {
         assert_eq!(38, calculate_calibration("pqr3stu8vwx")?);
         assert_eq!(15, calculate_calibration("a1b2c3d4e5f")?);
         assert_eq!(77, calculate_calibration("treb7uchet")?);
+        Ok(())
+    }
+
+    #[test]
+    fn word_to_digit_test() -> Result<()> {
+        assert_eq!(Some(29), parse_calibration("two1nine"));
+        assert_eq!(Some(83), parse_calibration("eightwothree"));
+        assert_eq!(Some(13), parse_calibration("abcone2threexyz"));
+        assert_eq!(Some(24), parse_calibration("xtwone3four"));
+        assert_eq!(Some(42), parse_calibration("4nineeightseven2"));
+        assert_eq!(Some(14), parse_calibration("zoneight234"));
+        assert_eq!(Some(76), parse_calibration("7pqrstsixteen"));
         Ok(())
     }
 }
