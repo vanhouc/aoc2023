@@ -13,6 +13,18 @@ impl CubeSet {
     fn is_superset(&self, other: &CubeSet) -> bool {
         self.red >= other.red && self.green >= other.green && self.blue >= other.blue
     }
+
+    fn make_superset(&mut self, other: &CubeSet) {
+        if self.red < other.red {
+            self.red = other.red
+        }
+        if self.green < other.green {
+            self.green = other.green
+        }
+        if self.blue < other.blue {
+            self.blue = other.blue
+        }
+    }
 }
 
 impl FromStr for CubeSet {
@@ -44,6 +56,16 @@ struct Game {
     sets: Vec<CubeSet>,
 }
 
+impl Game {
+    fn get_power(&self) -> u32 {
+        let lowest_set = self.sets.iter().fold(CubeSet::default(), |mut acc, set| {
+            acc.make_superset(set);
+            acc
+        });
+        lowest_set.red as u32 * lowest_set.green as u32 * lowest_set.blue as u32
+    }
+}
+
 impl FromStr for Game {
     type Err = Error;
 
@@ -69,6 +91,8 @@ fn main() -> Result<()> {
     let input = include_str!("input.txt");
     let output = calculate_part_1(input)?;
     println!("Part 1 Answer: {output}");
+    let output = calculate_part_2(input)?;
+    println!("Part 2 Answer: {output}");
     Ok(())
 }
 
@@ -89,15 +113,31 @@ fn calculate_part_1(input: &str) -> Result<u32> {
     Ok(id_sum)
 }
 
+fn calculate_part_2(input: &str) -> Result<u32> {
+    let games = input
+        .lines()
+        .map(|game| game.parse())
+        .collect::<Result<Vec<Game>>>()?;
+    let lowest_power_sum = games.into_iter().map(|game| game.get_power()).sum();
+    Ok(lowest_power_sum)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::calculate_part_1;
+    use crate::{calculate_part_1, calculate_part_2};
     use color_eyre::eyre::Result;
 
     #[test]
     fn calculate_part_1_test() -> Result<()> {
         let input = include_str!("test.txt");
         assert_eq!(8, calculate_part_1(input)?);
+        Ok(())
+    }
+
+    #[test]
+    fn calculate_part_2_test() -> Result<()> {
+        let input = include_str!("test.txt");
+        assert_eq!(2286, calculate_part_2(input)?);
         Ok(())
     }
 }
