@@ -9,9 +9,26 @@ struct Part {
     number: u32,
 }
 
+impl Part {
+    // Note that this grid will be outside of positive bounds of the grid
+    fn get_coord_grid(&self) -> Vec<(usize, usize)> {
+        let (x, y) = self.start;
+        let mut coords = Vec::new();
+        let range_x = x.saturating_sub(1)..=(x + 1);
+        for x in range_x {
+            let range_y = y.saturating_sub(1)..=(y + self.length);
+            for y in range_y {
+                coords.push((x, y));
+            }
+        }
+        coords
+    }
+}
+
 struct Schematic {
     grid: Vec<Vec<char>>,
     parts: Vec<Part>,
+    gears: Vec<(usize, usize)>,
 }
 
 impl Schematic {
@@ -36,6 +53,26 @@ impl Schematic {
             })
             .collect()
     }
+    fn get_gear_values(&self) -> Vec<u32> {
+        self.gears
+            .iter()
+            .filter_map(|gear| {
+                // Find all parts whose grid contains the gear
+                let adjacent_parts: Vec<u32> = self
+                    .parts
+                    .iter()
+                    .filter(|part| part.get_coord_grid().contains(gear))
+                    .map(|part| part.number)
+                    .collect();
+                // Only include gears that have more than one adjacent part
+                if adjacent_parts.len() > 1 {
+                    Some(adjacent_parts.iter().product::<u32>())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
 }
 
 impl FromStr for Schematic {
@@ -45,6 +82,7 @@ impl FromStr for Schematic {
         // Create a 2 dimensional grid of characters to represent the schematic grid
         let grid: Vec<Vec<char>> = s.lines().map(|line| line.chars().collect()).collect();
         let mut parts = Vec::new();
+        let mut gears = Vec::new();
         // Loop twice to get x,y coordinates for each character in the grid
         for (x, row) in grid.iter().enumerate() {
             let mut start = (0, 0);
@@ -62,13 +100,19 @@ impl FromStr for Schematic {
                         length += 1;
                         partial_number.push(*char);
                     }
-                    d if !d.is_ascii_digit() && !partial_number.is_empty() => {
-                        parts.push(Part {
-                            start,
-                            length,
-                            number: partial_number.iter().collect::<String>().parse()?,
-                        });
-                        partial_number.clear();
+                    d if d.is_ascii_punctuation() => {
+                        // Save out number if partial is being tracked
+                        if !partial_number.is_empty() {
+                            parts.push(Part {
+                                start,
+                                length,
+                                number: partial_number.iter().collect::<String>().parse()?,
+                            });
+                            partial_number.clear();
+                        }
+                        if *d == '*' {
+                            gears.push((x, y));
+                        }
                     }
                     _ => (),
                 }
@@ -82,7 +126,7 @@ impl FromStr for Schematic {
                 });
             }
         }
-        Ok(Schematic { grid, parts })
+        Ok(Schematic { grid, parts, gears })
     }
 }
 
@@ -91,6 +135,8 @@ fn main() -> Result<()> {
     let input = include_str!("input.txt");
     let output = calculate_part_1(input)?;
     println!("Part 1 Answer: {output}");
+    let output = calculate_part_2(input)?;
+    println!("Part 2 Answer: {output}");
     Ok(())
 }
 
@@ -101,15 +147,27 @@ fn calculate_part_1(input: &str) -> Result<u32> {
     Ok(valid_part_sum)
 }
 
+fn calculate_part_2(input: &str) -> Result<u32> {
+    let schematic: Schematic = input.parse()?;
+    let gear_score = schematic.get_gear_values();
+    Ok(gear_score.iter().sum())
+}
+
 #[cfg(test)]
 mod tests {
     use color_eyre::eyre::Result;
 
-    use crate::calculate_part_1;
+    use crate::{calculate_part_1, calculate_part_2};
     #[test]
     fn calculate_part_1_test() -> Result<()> {
         let input = include_str!("test.txt");
         assert_eq!(4361, calculate_part_1(input)?);
+        Ok(())
+    }
+    #[test]
+    fn calculate_part_2_test() -> Result<()> {
+        let input = include_str!("test.txt");
+        assert_eq!(467835, calculate_part_2(input)?);
         Ok(())
     }
 }
