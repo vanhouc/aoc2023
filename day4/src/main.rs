@@ -1,11 +1,21 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use color_eyre::eyre::{eyre, Error, Result};
 
+#[derive(Clone)]
 struct Scratchcard {
     id: u8,
     numbers: Vec<u8>,
     winning_numbers: Vec<u8>,
+}
+
+impl Scratchcard {
+    fn num_matches(&self) -> usize {
+        self.numbers
+            .iter()
+            .filter(|num| self.winning_numbers.contains(num))
+            .count()
+    }
 }
 
 impl FromStr for Scratchcard {
@@ -46,10 +56,12 @@ fn main() -> Result<()> {
     let input = include_str!("input.txt");
     let output = calculate_part_1(input)?;
     println!("Part 1 Answer: {output}");
+    let output = calculate_part_2(input)?;
+    println!("Part 2 Answer: {output}");
     Ok(())
 }
 
-fn calculate_part_1(input: &str) -> Result<u32> {
+fn calculate_part_1(input: &str) -> Result<usize> {
     let scratchcards: Vec<Scratchcard> = input
         .lines()
         .map(|line| line.parse())
@@ -66,16 +78,46 @@ fn calculate_part_1(input: &str) -> Result<u32> {
     Ok(score)
 }
 
+fn calculate_part_2(input: &str) -> Result<u32> {
+    // Parse our scratchcards
+    let scratchcards: Vec<Scratchcard> = input
+        .lines()
+        .map(|line| line.parse())
+        .collect::<Result<Vec<_>>>()?;
+    // Create a hashmap to track card counts
+    let mut counts: HashMap<u8, usize> = scratchcards.iter().map(|card| (card.id, 1)).collect();
+    for card in scratchcards.iter() {
+        let current_count = *counts.get(&card.id).ok_or(eyre!(
+            "attempted to access a non-existant card id, value: {}",
+            card.id
+        ))?;
+        let add_range = (card.id + 1) as usize..=card.id as usize + card.num_matches();
+        for id in add_range {
+            *counts.get_mut(&id.try_into()?).ok_or(eyre!(
+                "attempted to access a non-existant card id, value: {id}"
+            ))? += current_count;
+        }
+    }
+    Ok(counts.values().map(|count| *count as u32).sum())
+}
+
 #[cfg(test)]
 mod tests {
     use color_eyre::eyre::Result;
 
-    use crate::calculate_part_1;
+    use crate::{calculate_part_1, calculate_part_2};
 
     #[test]
     fn calculate_part_1_test() -> Result<()> {
         let input = include_str!("test.txt");
         assert_eq!(13, calculate_part_1(input)?);
+        Ok(())
+    }
+
+    #[test]
+    fn calculate_part_2_test() -> Result<()> {
+        let input = include_str!("test.txt");
+        assert_eq!(30, calculate_part_2(input)?);
         Ok(())
     }
 }
