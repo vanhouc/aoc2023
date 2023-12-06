@@ -62,6 +62,16 @@ impl Almanac {
             .map(|seed| self.maps.iter().fold(seed, |acc, map| map.map_source(acc)))
             .min()
     }
+    fn get_lowest_seed_range(&self) -> Option<u64> {
+        self.seeds
+            .iter()
+            .tuples()
+            .flat_map(|(start, length)| {
+                (*start..*start + *length)
+                    .map(|seed| self.maps.iter().fold(seed, |acc, map| map.map_source(acc)))
+            })
+            .min()
+    }
 }
 
 impl FromStr for Almanac {
@@ -94,6 +104,8 @@ fn main() -> Result<()> {
     let input = include_str!("input.txt");
     let output = calculate_part_1(input)?;
     println!("Part 1 Answer: {output}");
+    let output = calculate_part_2(input)?;
+    println!("Part 2 Answer: {output}");
     Ok(())
 }
 
@@ -105,15 +117,29 @@ fn calculate_part_1(input: &str) -> Result<u64> {
     Ok(lowest)
 }
 
+fn calculate_part_2(input: &str) -> Result<u64> {
+    let almanac: Almanac = input.parse()?;
+    let lowest = almanac
+        .get_lowest_seed_range()
+        .ok_or(eyre!("error while getting lowest seed"))?;
+    Ok(lowest)
+}
+
 #[cfg(test)]
 mod tests {
     use color_eyre::eyre::Result;
 
-    use crate::calculate_part_1;
+    use crate::{calculate_part_1, calculate_part_2};
     #[test]
     fn calculate_part_1_test() -> Result<()> {
         let input = include_str!("test.txt");
         assert_eq!(35, calculate_part_1(input)?);
+        Ok(())
+    }
+    #[test]
+    fn calculate_part_2_test() -> Result<()> {
+        let input = include_str!("test.txt");
+        assert_eq!(46, calculate_part_2(input)?);
         Ok(())
     }
 }
